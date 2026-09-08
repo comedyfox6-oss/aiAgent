@@ -1,0 +1,1415 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GPT Agent</title>
+
+<style>
+:root {
+    --bg: #05070d;
+    --panel: rgba(12,17,29,.92);
+    --panel2: rgba(20,27,43,.85);
+    --text: #f3f7ff;
+    --muted: #8793a8;
+    --accent: #00aaff;
+    --accent2: #006eff;
+    --border: rgba(0,170,255,.22);
+}
+
+[data-theme="light"] {
+    --bg: #eef4fa;
+    --panel: rgba(255,255,255,.94);
+    --panel2: rgba(235,243,252,.92);
+    --text: #101722;
+    --muted: #667386;
+    --accent: #0077ff;
+    --accent2: #005bea;
+    --border: rgba(0,110,255,.18);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    height: 100vh;
+    overflow: hidden;
+    background:
+        radial-gradient(
+            circle at 50% -10%,
+            rgba(0,150,255,.18),
+            transparent 40%
+        ),
+        var(--bg);
+    color: var(--text);
+    font-family:
+        Inter,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+}
+
+button,
+textarea {
+    font: inherit;
+}
+
+button {
+    cursor: pointer;
+}
+
+.app {
+    width: 100%;
+    max-width: 1100px;
+    height: 100vh;
+    margin: auto;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+/* HEADER */
+
+.header {
+    height: 70px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 18px;
+
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+
+    z-index: 10;
+}
+
+.profile {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.avatar {
+    width: 44px;
+    height: 44px;
+
+    display: grid;
+    place-items: center;
+
+    border-radius: 50%;
+
+    background:
+        radial-gradient(
+            circle at 30% 25%,
+            #4bd4ff,
+            #006eff 60%,
+            #001f54
+        );
+
+    box-shadow:
+        0 0 18px rgba(0,170,255,.6),
+        inset 0 0 12px rgba(255,255,255,.18);
+
+    font-size: 22px;
+}
+
+.profile-name {
+    font-weight: 800;
+    font-size: 16px;
+}
+
+.profile-status {
+    margin-top: 2px;
+    color: #25d67b;
+    font-size: 12px;
+}
+
+.header-actions {
+    display: flex;
+    gap: 7px;
+}
+
+.icon-btn {
+    width: 40px;
+    height: 40px;
+
+    border-radius: 12px;
+    border: 1px solid var(--border);
+
+    background: var(--panel2);
+    color: var(--text);
+
+    font-size: 18px;
+
+    transition: .2s;
+}
+
+.icon-btn:hover {
+    border-color: var(--accent);
+    box-shadow: 0 0 15px rgba(0,170,255,.25);
+}
+
+/* CHAT */
+
+.chat {
+    flex: 1;
+    overflow-y: auto;
+
+    padding:
+        28px
+        18px
+        145px;
+
+    scroll-behavior: smooth;
+}
+
+.chat::-webkit-scrollbar {
+    width: 6px;
+}
+
+.chat::-webkit-scrollbar-thumb {
+    background: rgba(0,170,255,.2);
+    border-radius: 20px;
+}
+
+/* WELCOME */
+
+.welcome {
+    max-width: 600px;
+    margin: 60px auto;
+    text-align: center;
+}
+
+.welcome-logo {
+    width: 82px;
+    height: 82px;
+
+    margin: auto;
+
+    display: grid;
+    place-items: center;
+
+    border-radius: 25px;
+
+    background:
+        linear-gradient(
+            145deg,
+            #071b35,
+            #003d72
+        );
+
+    border: 1px solid rgba(0,170,255,.5);
+
+    box-shadow:
+        0 0 35px rgba(0,170,255,.28),
+        inset 0 0 25px rgba(0,170,255,.15);
+
+    font-size: 40px;
+}
+
+.welcome h1 {
+    margin: 18px 0 8px;
+    font-size: clamp(28px,5vw,43px);
+}
+
+.welcome p {
+    color: var(--muted);
+}
+
+/* MESSAGES */
+
+.message-row {
+    display: flex;
+    margin: 15px 0;
+    animation: appear .22s ease;
+}
+
+.message-row.user {
+    justify-content: flex-end;
+}
+
+.message {
+    max-width: min(760px,88%);
+
+    padding: 13px 16px;
+
+    border-radius: 18px;
+
+    line-height: 1.5;
+
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.message.user {
+    color: white;
+
+    background:
+        linear-gradient(
+            135deg,
+            #006eff,
+            #00aaff
+        );
+
+    border-bottom-right-radius: 5px;
+
+    box-shadow:
+        0 5px 25px rgba(0,110,255,.22);
+}
+
+.message.assistant {
+    background: var(--panel);
+
+    border: 1px solid var(--border);
+
+    border-bottom-left-radius: 5px;
+
+    box-shadow:
+        0 0 30px rgba(0,150,255,.07);
+}
+
+.message-time {
+    margin-top: 5px;
+    font-size: 10px;
+    opacity: .48;
+}
+
+.reactions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 8px;
+}
+
+.reaction {
+    padding: 3px 8px;
+
+    border-radius: 999px;
+
+    border: 1px solid var(--border);
+
+    background: var(--panel2);
+    color: var(--text);
+
+    font-size: 13px;
+
+    transition: .15s;
+}
+
+.reaction:hover {
+    border-color: var(--accent);
+    transform: translateY(-1px);
+}
+
+/* TYPING */
+
+.typing {
+    display: flex;
+    gap: 5px;
+
+    width: fit-content;
+
+    padding: 14px 17px;
+
+    background: var(--panel);
+
+    border: 1px solid var(--border);
+
+    border-radius: 18px;
+    border-bottom-left-radius: 5px;
+}
+
+.dot {
+    width: 7px;
+    height: 7px;
+
+    border-radius: 50%;
+
+    background: var(--accent);
+
+    animation: bounce 1s infinite;
+}
+
+.dot:nth-child(2) {
+    animation-delay: .15s;
+}
+
+.dot:nth-child(3) {
+    animation-delay: .3s;
+}
+
+/* INPUT */
+
+.input-area {
+    position: absolute;
+
+    left: 0;
+    right: 0;
+    bottom: 0;
+
+    padding:
+        15px
+        18px
+        18px;
+
+    background:
+        linear-gradient(
+            to top,
+            var(--bg) 60%,
+            transparent
+        );
+}
+
+.input-box {
+    max-width: 900px;
+    margin: auto;
+
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+
+    padding: 9px;
+
+    background: var(--panel);
+
+    border:
+        1px solid var(--border);
+
+    border-radius: 19px;
+
+    backdrop-filter: blur(25px);
+}
+
+textarea {
+    flex: 1;
+
+    min-height: 42px;
+    max-height: 150px;
+
+    resize: none;
+
+    padding: 10px 7px;
+
+    border: 0;
+    outline: 0;
+
+    background: transparent;
+    color: var(--text);
+}
+
+textarea::placeholder {
+    color: var(--muted);
+}
+
+.send {
+    width: 44px;
+    height: 44px;
+
+    flex-shrink: 0;
+
+    border: 0;
+    border-radius: 14px;
+
+    background:
+        linear-gradient(
+            135deg,
+            var(--accent2),
+            var(--accent)
+        );
+
+    color: white;
+
+    font-size: 19px;
+
+    transition: .2s;
+}
+
+.send:hover {
+    transform: scale(1.05);
+}
+
+.send:disabled {
+    opacity: .45;
+    cursor: default;
+}
+
+/* MENU */
+
+.menu {
+    position: fixed;
+
+    top: 78px;
+    right: max(
+        18px,
+        calc((100vw - 1100px) / 2 + 18px)
+    );
+
+    width: 240px;
+
+    padding: 10px;
+
+    background: var(--panel);
+
+    border: 1px solid var(--border);
+
+    border-radius: 17px;
+
+    backdrop-filter: blur(25px);
+
+    box-shadow:
+        0 15px 50px rgba(0,0,0,.25);
+
+    display: none;
+
+    z-index: 100;
+}
+
+.menu.open {
+    display: block;
+    animation: appear .18s ease;
+}
+
+.menu button {
+    width: 100%;
+
+    padding: 12px;
+
+    border: 0;
+    border-radius: 10px;
+
+    background: transparent;
+    color: var(--text);
+
+    text-align: left;
+}
+
+.menu button:hover {
+    background: var(--panel2);
+}
+
+/* ANIMATION */
+
+@keyframes appear {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes bounce {
+    0%,60%,100% {
+        transform: translateY(0);
+        opacity: .45;
+    }
+
+    30% {
+        transform: translateY(-5px);
+        opacity: 1;
+    }
+}
+
+@media(max-width:600px) {
+
+    .header {
+        height: 62px;
+    }
+
+    .chat {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+
+    .message {
+        max-width: 92%;
+    }
+
+    .input-area {
+        padding-left: 9px;
+        padding-right: 9px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+<header class="header">
+
+    <div class="profile">
+
+        <div class="avatar" id="avatar">
+            🤖
+        </div>
+
+        <div>
+
+            <div
+                class="profile-name"
+                id="agentName"
+            >
+                GPT Agent
+            </div>
+
+            <div class="profile-status">
+                ● online
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="header-actions">
+
+        <button
+            class="icon-btn"
+            id="themeBtn"
+            title="Сменить тему"
+        >
+            ☀️
+        </button>
+
+        <button
+            class="icon-btn"
+            id="menuBtn"
+            title="Меню"
+        >
+            ⋮
+        </button>
+
+    </div>
+
+</header>
+
+
+<div
+    class="menu"
+    id="menu"
+>
+
+    <button onclick="changeName()">
+        ✏️ Изменить имя
+    </button>
+
+    <button onclick="changeAvatar()">
+        🖼️ Изменить аватар
+    </button>
+
+    <button onclick="clearChat()">
+        🗑️ Очистить чат
+    </button>
+
+    <button onclick="exportMemory()">
+        💾 Экспортировать память
+    </button>
+
+</div>
+
+
+<main
+    class="chat"
+    id="chat"
+>
+
+    <section
+        class="welcome"
+        id="welcome"
+    >
+
+        <div class="welcome-logo">
+            ⚡
+        </div>
+
+        <h1 id="welcomeTitle">
+            GPT Agent
+        </h1>
+
+        <p>
+            Твой GPT-агент уже на связи.
+        </p>
+
+    </section>
+
+</main>
+
+
+<div class="input-area">
+
+    <div class="input-box">
+
+        <textarea
+            id="input"
+            rows="1"
+            placeholder="Напиши сообщение..."
+        ></textarea>
+
+        <button
+            class="send"
+            id="sendBtn"
+        >
+            ➤
+        </button>
+
+    </div>
+
+</div>
+
+</div>
+
+
+<script>
+
+/* =====================================================
+   ТВОЙ CLOUDFLARE WORKER
+   ===================================================== */
+
+const WORKER_URL =
+    "https://aiagentproga.comedyfox6.workers.dev/";
+
+
+/* =====================================================
+   STORAGE
+   ===================================================== */
+
+const CHAT_KEY =
+    "gpt_agent_chat";
+
+const PROFILE_KEY =
+    "gpt_agent_profile";
+
+const THEME_KEY =
+    "gpt_agent_theme";
+
+
+/* =====================================================
+   STATE
+   ===================================================== */
+
+let chatHistory =
+    JSON.parse(
+        localStorage.getItem(CHAT_KEY) || "[]"
+    );
+
+let profile =
+    JSON.parse(
+        localStorage.getItem(PROFILE_KEY) ||
+        '{"name":"GPT Agent","avatar":"🤖"}'
+    );
+
+
+/* =====================================================
+   ELEMENTS
+   ===================================================== */
+
+const chat =
+    document.getElementById("chat");
+
+const input =
+    document.getElementById("input");
+
+const sendBtn =
+    document.getElementById("sendBtn");
+
+const menu =
+    document.getElementById("menu");
+
+const menuBtn =
+    document.getElementById("menuBtn");
+
+const themeBtn =
+    document.getElementById("themeBtn");
+
+const welcome =
+    document.getElementById("welcome");
+
+const agentName =
+    document.getElementById("agentName");
+
+const welcomeTitle =
+    document.getElementById("welcomeTitle");
+
+const avatar =
+    document.getElementById("avatar");
+
+
+/* =====================================================
+   PROFILE
+   ===================================================== */
+
+function updateProfile() {
+
+    agentName.textContent =
+        profile.name;
+
+    welcomeTitle.textContent =
+        profile.name;
+
+    avatar.textContent =
+        profile.avatar;
+
+    localStorage.setItem(
+        PROFILE_KEY,
+        JSON.stringify(profile)
+    );
+}
+
+updateProfile();
+
+
+/* =====================================================
+   THEME
+   ===================================================== */
+
+if (
+    localStorage.getItem(THEME_KEY)
+    === "light"
+) {
+
+    document.documentElement
+        .dataset.theme = "light";
+
+    themeBtn.textContent = "🌙";
+}
+
+themeBtn.onclick = () => {
+
+    const light =
+        document.documentElement
+            .dataset.theme === "light";
+
+    if (light) {
+
+        delete document.documentElement
+            .dataset.theme;
+
+        themeBtn.textContent = "☀️";
+
+        localStorage.setItem(
+            THEME_KEY,
+            "dark"
+        );
+
+    } else {
+
+        document.documentElement
+            .dataset.theme = "light";
+
+        themeBtn.textContent = "🌙";
+
+        localStorage.setItem(
+            THEME_KEY,
+            "light"
+        );
+    }
+};
+
+
+/* =====================================================
+   MENU
+   ===================================================== */
+
+menuBtn.onclick = () => {
+
+    menu.classList.toggle("open");
+
+};
+
+document.addEventListener(
+    "click",
+    event => {
+
+        if (
+            !menu.contains(event.target) &&
+            !menuBtn.contains(event.target)
+        ) {
+
+            menu.classList.remove("open");
+
+        }
+
+    }
+);
+
+
+/* =====================================================
+   ADD MESSAGE
+   ===================================================== */
+
+function addMessage(
+    role,
+    text,
+    save = true
+) {
+
+    welcome.style.display = "none";
+
+    const row =
+        document.createElement("div");
+
+    row.className =
+        "message-row " +
+        (
+            role === "user"
+                ? "user"
+                : "assistant"
+        );
+
+    const bubble =
+        document.createElement("div");
+
+    bubble.className =
+        "message " +
+        (
+            role === "user"
+                ? "user"
+                : "assistant"
+        );
+
+    const content =
+        document.createElement("div");
+
+    content.textContent = text;
+
+    bubble.appendChild(content);
+
+
+    const time =
+        document.createElement("div");
+
+    time.className =
+        "message-time";
+
+    time.textContent =
+        new Date().toLocaleTimeString(
+            "ru-RU",
+            {
+                hour: "2-digit",
+                minute: "2-digit"
+            }
+        );
+
+    bubble.appendChild(time);
+
+
+    /* REACTIONS */
+
+    if (role === "assistant") {
+
+        const reactions =
+            document.createElement("div");
+
+        reactions.className =
+            "reactions";
+
+        const emojis = [
+            "☺️",
+            "😠",
+            "😕",
+            "🙂",
+            "💍",
+            "💙",
+            "💔",
+            "🗿"
+        ];
+
+        emojis.forEach(
+            emoji => {
+
+                const button =
+                    document.createElement("button");
+
+                button.className =
+                    "reaction";
+
+                button.textContent =
+                    emoji;
+
+                button.onclick = () => {
+
+                    button.style
+                        .borderColor =
+                        "var(--accent)";
+
+                    button.style
+                        .boxShadow =
+                        "0 0 10px rgba(0,170,255,.3)";
+                };
+
+                reactions.appendChild(
+                    button
+                );
+
+            }
+        );
+
+        bubble.appendChild(
+            reactions
+        );
+    }
+
+
+    row.appendChild(bubble);
+
+    chat.appendChild(row);
+
+    chat.scrollTop =
+        chat.scrollHeight;
+
+
+    if (save) {
+
+        chatHistory.push({
+            role: role,
+            content: text
+        });
+
+        localStorage.setItem(
+            CHAT_KEY,
+            JSON.stringify(chatHistory)
+        );
+    }
+}
+
+
+/* =====================================================
+   LOAD HISTORY
+   ===================================================== */
+
+if (chatHistory.length) {
+
+    welcome.style.display =
+        "none";
+
+    chatHistory.forEach(
+        message => {
+
+            addMessage(
+                message.role,
+                message.content,
+                false
+            );
+
+        }
+    );
+}
+
+
+/* =====================================================
+   TYPING
+   ===================================================== */
+
+function showTyping() {
+
+    const row =
+        document.createElement("div");
+
+    row.className =
+        "message-row assistant";
+
+    row.id = "typing";
+
+    row.innerHTML = `
+        <div class="typing">
+            <span class="dot"></span>
+            <span class="dot"></span>
+            <span class="dot"></span>
+        </div>
+    `;
+
+    chat.appendChild(row);
+
+    chat.scrollTop =
+        chat.scrollHeight;
+}
+
+
+function hideTyping() {
+
+    const typing =
+        document.getElementById("typing");
+
+    if (typing) {
+        typing.remove();
+    }
+}
+
+
+/* =====================================================
+   GROQ THROUGH WORKER
+   ===================================================== */
+
+async function askAgent(messages) {
+
+    const response =
+        await fetch(
+            WORKER_URL,
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
+
+                body: JSON.stringify({
+                    messages: messages
+                })
+            }
+        );
+
+
+    let data;
+
+    try {
+
+        data =
+            await response.json();
+
+    } catch {
+
+        throw new Error(
+            "Worker вернул не JSON."
+        );
+
+    }
+
+
+    if (
+        !response.ok ||
+        data.error
+    ) {
+
+        throw new Error(
+            data.error ||
+            "Ошибка Groq API."
+        );
+
+    }
+
+
+    return data.reply || "";
+}
+
+
+/* =====================================================
+   SEND
+   ===================================================== */
+
+async function sendMessage() {
+
+    const text =
+        input.value.trim();
+
+    if (!text) {
+        return;
+    }
+
+
+    input.value = "";
+
+    input.style.height =
+        "auto";
+
+    sendBtn.disabled = true;
+
+
+    addMessage(
+        "user",
+        text
+    );
+
+
+    showTyping();
+
+
+    try {
+
+        const messages = [
+
+            {
+                role: "system",
+
+                content:
+`Ты GPT-агент.
+
+Твоё имя: ${profile.name}.
+
+Общайся естественно и живо.
+Отвечай на русском, если пользователь пишет по-русски.
+Не будь сухим и роботизированным.
+`
+            },
+
+            ...chatHistory
+
+        ];
+
+
+        const reply =
+            await askAgent(
+                messages
+            );
+
+
+        hideTyping();
+
+
+        addMessage(
+            "assistant",
+            reply
+        );
+
+
+    } catch (error) {
+
+        hideTyping();
+
+        addMessage(
+            "assistant",
+            "⚠️ " +
+            error.message
+        );
+
+    } finally {
+
+        sendBtn.disabled = false;
+
+        input.focus();
+
+    }
+}
+
+
+/* =====================================================
+   SEND BUTTON
+   ===================================================== */
+
+sendBtn.onclick =
+    sendMessage;
+
+
+/* =====================================================
+   ENTER
+   ===================================================== */
+
+input.addEventListener(
+    "keydown",
+    event => {
+
+        if (
+            event.key === "Enter" &&
+            !event.shiftKey
+        ) {
+
+            event.preventDefault();
+
+            sendMessage();
+
+        }
+
+    }
+);
+
+
+/* =====================================================
+   AUTO RESIZE
+   ===================================================== */
+
+input.addEventListener(
+    "input",
+    () => {
+
+        input.style.height =
+            "auto";
+
+        input.style.height =
+            Math.min(
+                input.scrollHeight,
+                150
+            ) + "px";
+
+    }
+);
+
+
+/* =====================================================
+   CLEAR
+   ===================================================== */
+
+function clearChat() {
+
+    if (
+        !confirm(
+            "Удалить всю историю?"
+        )
+    ) {
+        return;
+    }
+
+
+    chatHistory = [];
+
+    localStorage.removeItem(
+        CHAT_KEY
+    );
+
+
+    chat.innerHTML = "";
+
+    chat.appendChild(
+        welcome
+    );
+
+    welcome.style.display =
+        "block";
+
+    menu.classList.remove(
+        "open"
+    );
+}
+
+
+/* =====================================================
+   NAME
+   ===================================================== */
+
+function changeName() {
+
+    const name =
+        prompt(
+            "Новое имя агента:",
+            profile.name
+        );
+
+    if (
+        !name ||
+        !name.trim()
+    ) {
+        return;
+    }
+
+
+    profile.name =
+        name.trim();
+
+    updateProfile();
+
+    menu.classList.remove(
+        "open"
+    );
+}
+
+
+/* =====================================================
+   AVATAR
+   ===================================================== */
+
+function changeAvatar() {
+
+    const newAvatar =
+        prompt(
+            "Новый аватар-эмодзи:",
+            profile.avatar
+        );
+
+    if (
+        !newAvatar ||
+        !newAvatar.trim()
+    ) {
+        return;
+    }
+
+
+    profile.avatar =
+        newAvatar.trim();
+
+    updateProfile();
+
+    menu.classList.remove(
+        "open"
+    );
+}
+
+
+/* =====================================================
+   EXPORT
+   ===================================================== */
+
+function exportMemory() {
+
+    const data = {
+
+        profile:
+            profile,
+
+        chatHistory:
+            chatHistory,
+
+        exportedAt:
+            new Date().toISOString()
+
+    };
+
+
+    const blob =
+        new Blob(
+            [
+                JSON.stringify(
+                    data,
+                    null,
+                    2
+                )
+            ],
+            {
+                type:
+                    "application/json"
+            }
+        );
+
+
+    const url =
+        URL.createObjectURL(
+            blob
+        );
+
+
+    const a =
+        document.createElement(
+            "a"
+        );
+
+    a.href = url;
+
+    a.download =
+        "gpt-agent-memory.json";
+
+    a.click();
+
+
+    URL.revokeObjectURL(
+        url
+    );
+
+    menu.classList.remove(
+        "open"
+    );
+}
+
+</script>
+
+</body>
+</html>
